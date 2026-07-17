@@ -48,3 +48,6 @@ Interim option: manually add a row to `data/log.csv` from the Fittr app's number
 
 ### 2026-07-17 — PLAN.md introduced
 - Decision: keep this living plan file; update it whenever the plan changes so any future session can pick up from here.
+
+### 2026-07-17 — fighter-builder skill added
+- `.claude/skills/fighter-builder/SKILL.md`: working rules for Claude in this repo — never invent facts, ask when in doubt, respect the adapter-layer architecture, verify before claiming done, keep PLAN.md updated, scope discipline.
