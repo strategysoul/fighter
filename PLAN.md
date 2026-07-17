@@ -7,25 +7,32 @@
 
 **v1 is done and pushed.** The repo has a working prototype: sample data, scoring engine, static dashboard.
 
-**Next up: v1.1 — Health Sync pipeline.** Blocked on phone-side setup (see "Waiting on" below).
+**Next up: v1.1 — Health Connect native backup pipeline (free route).** Blocked on phone-side setup (see "Waiting on" below).
 
 ## What to do next (v1.1)
 
-Phone/PC setup (Sweta):
-1. Install Health Sync on Android; configure export from Health Connect → Google Drive as daily CSVs.
-2. In Health Connect → Browse data, check which metrics Fittr writes (does HRV / stress appear, or only steps/HR/sleep?).
-3. Install Google Drive for Desktop on the PC so the export folder syncs locally.
-4. Share one real Health Sync CSV export.
+**Route decision (2026-07-17):** use Health Connect's built-in scheduled export — it writes a `Health Connect.zip` (containing an unencrypted SQLite database) to Google Drive on a schedule. Free, no third-party app. Python stdlib (`zipfile` + `sqlite3`) reads it directly. The paid Health Sync CSV route is the documented fallback if the SQLite schema proves too unstable. Known risk (accepted): the DB schema is internal/undocumented and may change with HC updates — the adapter must fail loudly, never guess.
 
-Then (Claude): build the parser/adapter that converts the Health Sync CSV into the `data/log.csv` schema. Scoring/rendering don't change (adapter-layer design, PRD §6).
+Phase 0 — phone/PC setup (Sweta, one-time):
+1. Health Connect → Settings → Data export/backup → schedule daily export to Google Drive.
+2. In Health Connect → Browse data, check which metrics Fittr writes (does HRV / stress appear, or only steps/HR/sleep?).
+3. Install Google Drive for Desktop on the PC; note the local path where `Health Connect.zip` lands.
+4. Share one real `Health Connect.zip` (adapter is built against a real file only).
+
+Phase 1 (Claude): inspect the real backup — dump SQLite table schemas, map tables → metrics, document in `data/samples/SCHEMA_NOTES.md`.
+
+Phase 2 (Claude): build `import_health_connect.py` (stdlib only): open DB read-only, aggregate to daily granularity, merge into `data/log.csv` — add new dates, fill blanks, never overwrite a non-empty cell (manual entries win). Fail loudly on schema drift. Idempotent re-runs. Scoring/rendering untouched (adapter-layer, PRD §6).
+
+Phase 3: README usage docs; later (v3) a Windows scheduled task automates import+rebuild.
 
 Interim option: manually add a row to `data/log.csv` from the Fittr app's numbers and run `python build_dashboard.py` to get real scores today.
 
-## Waiting on / open questions (from PRD §7)
+## Waiting on / open questions
 
-- [ ] Does Health Sync export HRV and stress from Health Connect? (Sweta)
-- [ ] Sample Health Sync CSV file to build the parser against (Sweta)
-- [ ] Does Fittr write all metrics to Health Connect, or a subset? (Sweta)
+- [ ] Health Connect scheduled export set up on phone → Drive (Sweta)
+- [ ] One real `Health Connect.zip` to build the adapter against (Sweta)
+- [ ] Does Fittr write all metrics to Health Connect, or a subset? (Sweta — HC → Browse data)
+- [ ] Google Drive for Desktop installed; local path of the backup zip (Sweta)
 - [ ] Garmin export file for history import (v2)
 
 ## Roadmap (from PRD §8)
@@ -48,6 +55,11 @@ Interim option: manually add a row to `data/log.csv` from the Fittr app's number
 
 ### 2026-07-17 — PLAN.md introduced
 - Decision: keep this living plan file; update it whenever the plan changes so any future session can pick up from here.
+
+### 2026-07-17 — v1.1 route decided: native Health Connect backup
+- Researched feasible read-only export routes. Options found: (a) Health Sync app → daily CSVs in Drive (paid, cleanest format); (b) Health Connect's native scheduled export → zip with unencrypted SQLite DB in Drive (free, undocumented schema); (c) open-source exporter apps.
+- **Decision (Sweta): route (b), the free native backup.** Health Sync kept as documented fallback.
+- Planned v1.1: Phase 0 phone setup → Phase 1 schema inspection → Phase 2 `import_health_connect.py` adapter (read-only, idempotent, never overwrites non-empty cells) → Phase 3 docs. Blocked on a real `Health Connect.zip`.
 
 ### 2026-07-17 — fighter-builder skill added
 - `.claude/skills/fighter-builder/SKILL.md`: working rules for Claude in this repo — never invent facts, ask when in doubt, respect the adapter-layer architecture, verify before claiming done, keep PLAN.md updated, scope discipline.
