@@ -7,7 +7,9 @@
 
 **v1 is done and pushed.** The repo has a working prototype: sample data, scoring engine, static dashboard.
 
-**v1.1 importer is DONE and ran against the real backup** (234 dates imported: sleep, resting HR, steps). **New blocker: the Fittr app largely stopped syncing to Health Connect months ago** — sleep data ends 2026-04-02, resting HR 2026-03-07; only Google Fit steps are current. HRV is never written; stress doesn't exist in Health Connect. Fix the phone-side Fittr → Health Connect sync before daily readiness is meaningful.
+**v1.1 importer is DONE; pipeline verified end-to-end** (phone export → Drive → import → dashboard; 235 dates imported). **Waiting overnight to confirm the Fittr sync fix**: Sweta re-enabled Fittr → Health Connect sync on 2026-07-18, but the same-day re-export still contained no new Fittr data (sleep still ends 2026-04-02) — likely because Fittr only writes going forward. Tomorrow morning's export is the real test.
+
+**Tomorrow (2026-07-19): re-run `python import_health_connect.py` then `python build_dashboard.py`** on the fresh export. If last night's sleep appears → sync fixed, readiness score goes live. If not → debug on phone: HC → Browse data → Sleep; Fittr app HC toggle; HC → App permissions → Fittr.
 
 ## What to do next (v1.1)
 
@@ -33,7 +35,7 @@ Interim option: manually add a row to `data/log.csv` from the Fittr app's number
 - [x] Real backup obtained; schema verified and documented in `data/samples/SCHEMA_NOTES.md`
 - [x] What Fittr writes to HC: sleep, HR, steps, SpO₂ — but sync mostly stopped Jan–Apr 2026. **HRV never written; stress has no HC record type; sleep_quality not derivable.**
 - [x] Read-only adapter with verified mapping, non-clobbering merge, idempotent reruns
-- [ ] **Fix Fittr → Health Connect sync on the phone** (Fittr app settings / HC permissions), then re-export and re-run import (Sweta)
+- [ ] **Confirm Fittr sync fix worked**: re-run import on 2026-07-19 morning export; last night's sleep should appear (Sweta re-enabled sync 2026-07-18; same-day export had no new Fittr data yet)
 - [ ] Decide fallback for HRV/stress: they will never come via Health Connect — accept a 3-metric score (weights auto-redistribute), or screenshot-logging path (PRD P1 #6)
 - [ ] Garmin export file for history import (v2)
 
@@ -78,6 +80,11 @@ Interim option: manually add a row to `data/log.csv` from the Fittr app's number
 - Implemented `extract_daily`: sleep = merged session intervals per wake-date (Fittr writes 60-second micro-sessions); resting HR direct; steps = per-app daily sums with max-across-apps (dedupe). Wiped fake sample data from `data/log.csv` (recoverable in git history); imported 234 real dates. Re-run verified idempotent; source zip untouched.
 - Dashboard now handles a no-scorable-metrics day (grey "–" score) — latest days only have steps.
 - **Finding: Fittr stopped syncing to Health Connect** (HR ended 2026-01-20, steps 2026-01-22, SpO₂ 2026-01-03, sleep 2026-04-02). Only Google Fit steps are current. HRV table empty; no stress record type exists in HC. → New blockers logged above.
+
+### 2026-07-18 (later) — sync fix awaiting overnight confirmation
+- Sweta re-enabled Fittr → Health Connect sync and triggered a fresh export (14:51).
+- Import ran clean (1 new date: steps only), but the fresh backup still had no new Fittr data — sleep still ends 2026-04-02, Fittr HR 2026-01-20. Hypothesis: Fittr writes going forward only, so tonight's sleep is the first real test.
+- Next session: re-run import + rebuild on the morning export; if sleep appears, v1.1 is fully live. If not, debug phone-side (HC → Browse data / Fittr toggle / HC permissions).
 
 ### 2026-07-18 - plan updated
 - Confirmed the repository has no real Health Connect ZIP/SQLite backup yet.
