@@ -3,11 +3,11 @@
 > Running log of what was planned, what's done, and what's next.
 > Updated every time the plan changes. Read this first when resuming work on the repo.
 
-## Current status (as of 2026-07-17)
+## Current status (as of 2026-07-18)
 
 **v1 is done and pushed.** The repo has a working prototype: sample data, scoring engine, static dashboard.
 
-**Next up: v1.1 — Health Connect native backup pipeline (free route).** Blocked on phone-side setup (see "Waiting on" below).
+**v1.1 importer is DONE and ran against the real backup** (234 dates imported: sleep, resting HR, steps). **New blocker: the Fittr app largely stopped syncing to Health Connect months ago** — sleep data ends 2026-04-02, resting HR 2026-03-07; only Google Fit steps are current. HRV is never written; stress doesn't exist in Health Connect. Fix the phone-side Fittr → Health Connect sync before daily readiness is meaningful.
 
 ## What to do next (v1.1)
 
@@ -19,9 +19,9 @@ Phase 0 — phone/PC setup (Sweta, one-time):
 3. Install Google Drive for Desktop on the PC; note the local path where `Health Connect.zip` lands.
 4. Share one real `Health Connect.zip` (adapter is built against a real file only).
 
-Phase 1 (Claude): inspect the real backup — dump SQLite table schemas, map tables → metrics, document in `data/samples/SCHEMA_NOTES.md`.
+Phase 1 (blocked): inspect the real backup, dump SQLite table schemas, map tables to metrics, and document the verified mapping in `data/samples/SCHEMA_NOTES.md`.
 
-Phase 2 (Claude): build `import_health_connect.py` (stdlib only): open DB read-only, aggregate to daily granularity, merge into `data/log.csv` — add new dates, fill blanks, never overwrite a non-empty cell (manual entries win). Fail loudly on schema drift. Idempotent re-runs. Scoring/rendering untouched (adapter-layer, PRD §6).
+Phase 2 (in progress): the adapter shell supports read-only ZIP/SQLite inspection, exact mapping validation, fail-loud errors, and non-clobbering CSV merge. After Phase 1, implement verified daily aggregation and import summary. Scoring/rendering remain untouched.
 
 Phase 3: README usage docs; later (v3) a Windows scheduled task automates import+rebuild.
 
@@ -29,16 +29,18 @@ Interim option: manually add a row to `data/log.csv` from the Fittr app's number
 
 ## Waiting on / open questions
 
-- [ ] Health Connect scheduled export set up on phone → Drive (Sweta)
-- [ ] One real `Health Connect.zip` to build the adapter against (Sweta)
-- [ ] Does Fittr write all metrics to Health Connect, or a subset? (Sweta — HC → Browse data)
-- [ ] Google Drive for Desktop installed; local path of the backup zip (Sweta)
+- [x] Health Connect scheduled export set up on phone → Drive (`G:\My Drive\Faitttr\Health Connect.zip`)
+- [x] Real backup obtained; schema verified and documented in `data/samples/SCHEMA_NOTES.md`
+- [x] What Fittr writes to HC: sleep, HR, steps, SpO₂ — but sync mostly stopped Jan–Apr 2026. **HRV never written; stress has no HC record type; sleep_quality not derivable.**
+- [x] Read-only adapter with verified mapping, non-clobbering merge, idempotent reruns
+- [ ] **Fix Fittr → Health Connect sync on the phone** (Fittr app settings / HC permissions), then re-export and re-run import (Sweta)
+- [ ] Decide fallback for HRV/stress: they will never come via Health Connect — accept a 3-metric score (weights auto-redistribute), or screenshot-logging path (PRD P1 #6)
 - [ ] Garmin export file for history import (v2)
 
 ## Roadmap (from PRD §8)
 
 - **v1 — DONE (2026-07-16)**: CSV schema, scoring engine, static dashboard with sample data.
-- **v1.1 — NEXT**: Health Sync pipeline + CSV parser/adapter. Blocked on open questions above.
+- **v1.1 - IN PROGRESS**: native Health Connect backup adapter shell complete; real schema inspection and metric extraction pending the backup.
 - **v2**: Garmin history import; tune readiness weights against real personal data.
 - **v3**: Auto-rebuild on new data (Windows scheduled task), weekly summary, illness early-warning flag.
 
@@ -63,3 +65,21 @@ Interim option: manually add a row to `data/log.csv` from the Fittr app's number
 
 ### 2026-07-17 — fighter-builder skill added
 - `.claude/skills/fighter-builder/SKILL.md`: working rules for Claude in this repo — never invent facts, ask when in doubt, respect the adapter-layer architecture, verify before claiming done, keep PLAN.md updated, scope discipline.
+
+
+### 2026-07-17 - v1.1 adapter shell added
+- Added `import_health_connect.py` with ZIP/SQLite read-only handling, schema inspection, explicit fail-loud behavior, and safe CSV merge support.
+- Added `data/samples/SCHEMA_NOTES.md` as the Phase 1 evidence record.
+- No Health Connect mapping was invented; importing remains blocked until a real backup is supplied.
+
+
+### 2026-07-18 — v1.1 importer completed against real backup
+- Inspected real `Health Connect.zip`: SQLite DB, 78 tables; verified mapping documented in `data/samples/SCHEMA_NOTES.md`.
+- Implemented `extract_daily`: sleep = merged session intervals per wake-date (Fittr writes 60-second micro-sessions); resting HR direct; steps = per-app daily sums with max-across-apps (dedupe). Wiped fake sample data from `data/log.csv` (recoverable in git history); imported 234 real dates. Re-run verified idempotent; source zip untouched.
+- Dashboard now handles a no-scorable-metrics day (grey "–" score) — latest days only have steps.
+- **Finding: Fittr stopped syncing to Health Connect** (HR ended 2026-01-20, steps 2026-01-22, SpO₂ 2026-01-03, sleep 2026-04-02). Only Google Fit steps are current. HRV table empty; no stress record type exists in HC. → New blockers logged above.
+
+### 2026-07-18 - plan updated
+- Confirmed the repository has no real Health Connect ZIP/SQLite backup yet.
+- Kept Phase 1 explicitly blocked; no table or column mapping will be inferred.
+- Next action: complete Phase 0 phone/Drive setup and provide one real backup, then run `python import_health_connect.py <path> --inspect`.

@@ -100,6 +100,8 @@ def actions_for(score, parts):
 
 
 def color(score):
+    if score is None:
+        return "#999"
     return "#22a35a" if score >= 75 else "#e0a800" if score >= 50 else "#d9453d"
 
 
@@ -123,7 +125,7 @@ def build():
     payload = json.dumps({"charts": chart_data, "table": table})
     html = TEMPLATE
     html = html.replace("__DATE__", today["date"])
-    html = html.replace("__SCORE__", str(score))
+    html = html.replace("__SCORE__", "–" if score is None else str(score))
     html = html.replace("__COLOR__", color(score))
     html = html.replace("__ACTIONS__", "".join(f"<li>{a}</li>" for a in acts))
     html = html.replace("__DATA__", payload)
